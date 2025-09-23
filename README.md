@@ -60,6 +60,5 @@ cd ../front-end
 npm install           # install npm dependencies
 cd front-end
 npm run dev
-``
 
 

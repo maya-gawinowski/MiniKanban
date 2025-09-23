@@ -33,5 +33,31 @@ It lets you **register, log in, and view a protected Kanban page** that shows th
 
 ---
 
-## 📂 Project Structure (high-level)
+## 📥 Installation
+
+Clone the repository and install dependencies for **both** the backend and frontend.
+
+```bash
+# Clone the project
+git clone https://github.com/your-username/minikanban.git
+cd minikanban
+
+### Back-end
+
+```bash
+cd back-end
+dotnet restore        # restore NuGet packages
+dotnet ef database update   # create the SQLite dev database
+cd back-end
+dotnet run
+
+### Front-end
+
+```bash
+cd ../front-end
+npm install           # install npm dependencies
+cd front-end
+npm run dev
+
+
 

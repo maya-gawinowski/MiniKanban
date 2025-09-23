@@ -41,6 +41,7 @@ Clone the repository and install dependencies for **both** the backend and front
 # Clone the project
 git clone https://github.com/your-username/minikanban.git
 cd minikanban
+```
 
 ### Back-end
 
@@ -50,6 +51,7 @@ dotnet restore        # restore NuGet packages
 dotnet ef database update   # create the SQLite dev database
 cd back-end
 dotnet run
+```
 
 ### Front-end
 
@@ -58,6 +60,6 @@ cd ../front-end
 npm install           # install npm dependencies
 cd front-end
 npm run dev
-
+``
 
 

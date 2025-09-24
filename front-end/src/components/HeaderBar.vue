@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RouterLink, useRoute, useRouter } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 import { useAuth } from '../../store/auth'
 
 defineOptions({ inheritAttrs: false })  // prevent auto inheritance

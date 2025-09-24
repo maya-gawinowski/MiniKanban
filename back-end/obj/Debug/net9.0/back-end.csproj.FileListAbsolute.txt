@@ -194,3 +194,4 @@
 /Users/mayajane/Documents/NET/MiniKanban/back-end/bin/Debug/net9.0/Swashbuckle.AspNetCore.SwaggerGen.dll
 /Users/mayajane/Documents/NET/MiniKanban/back-end/bin/Debug/net9.0/Swashbuckle.AspNetCore.SwaggerUI.dll
 /Users/mayajane/Documents/NET/MiniKanban/back-end/obj/Debug/net9.0/back-end.MvcApplicationPartsAssemblyInfo.cs
+/Users/mayajane/Documents/NET/MiniKanban/back-end/obj/Debug/net9.0/back-end.sourcelink.json

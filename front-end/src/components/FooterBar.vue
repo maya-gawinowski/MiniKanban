@@ -1,4 +1,3 @@
-<!-- FooterBar.vue -->
 <template>
   <footer class="footer-bar">
     <small>© {{ new Date().getFullYear() }}</small>

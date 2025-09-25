@@ -1,6 +1,7 @@
 using Kanban.Data;
 using Kanban.Models;
 using Kanban.Features.Auth;
+using Kanban.Features.Kanban;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -91,5 +92,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAuthEndpoints();
+app.MapKanban();
 
 app.Run();

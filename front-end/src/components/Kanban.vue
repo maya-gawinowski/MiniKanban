@@ -1,7 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import draggable from 'vuedraggable'
 import { v4 as uuid } from 'uuid'
+import axios from 'axios';
+import { useAuth } from '../../store/auth';
+import { useBoard } from '../../store/kanban'
+import { useRouter } from 'vue-router';
+
+const auth = useAuth()
+const router = useRouter()
+const board = useBoard()
+
+const errorMsg = ref('')
+const loading = ref(false)
+
+const isInputVisible = ref(false)
+const input = ref('')
 
 type Card = { id: string; title: string }
 type Column = { id: string; name: string; cards: Card[] }
@@ -17,41 +31,75 @@ function addCard(col: Column) {
     col.cards.push({id: uuid(), title: "new card"})
 }
 
+async function addBoard() {
+    if (!input.value.trim()) return
+    
+    await board.createBoard(input.value)
+    input.value = ''
+    isInputVisible.value = false
+}
+
 function onDragEnd() {
   // TO FIX => post modification to api
   console.log('New order:', columns.value)
 }
+
+onMounted(async () => {
+    if (!auth.isLoggedIn) {
+        router.push({path: '/login', query: {redirect: '/kanban'}})
+        return
+    }
+
+    try {
+        await board.loadBoards()
+        console.log(board.boards)
+    } catch {
+
+    }
+})
 </script>
 
 <template>
     <h2 class="">My mini Kanban</h2>
-    <div class="board">
-        <div v-for="col in columns" :key="col.id" class="column">
-            <header class="column-header">
-            <h3>{{ col.name }}</h3>
-            <button class="add" @click="addCard(col)">＋</button>
-            </header>
+    <button class="add" @click="isInputVisible = !isInputVisible">Add a board</button>
+    <p v-if="isInputVisible">Choose your new board's name</p>
+    <input v-if="isInputVisible" type="text" v-model="input">
+    <button v-if="isInputVisible" class="add" @click="addBoard">Create Board</button>
+    
+    <div v-if="board.loading">Loading boards...</div>
+    <p v-else-if="board.error" class="error">{{ board.error }}</p>
 
-            <draggable
-                v-model="col.cards"
-                item-key="id"
-                group="kanban"          
-                @end="onDragEnd"
-                class="card-list"
-                ghost-class="ghost"
-                drag-class="dragging"
-            >
-                <template #item="{ element }">
-                    <div class="card">
-                    {{ element.title }}
-                    </div>
-                </template>
-                <template #footer>
-                    <div class="drop-helper">Drop here</div>
-                </template>
-            </draggable>
+    <div v-else v-for="board in board.boards" :key="board.id">
+        <h3>{{  board.name  }}</h3>
+        <div class="board">
+            <div v-for="col in columns" :key="col.id" class="column">
+                <header class="column-header">
+                <h3>{{ col.name }}</h3>
+                <button class="add" @click="addCard(col)">＋</button>
+                </header>
+
+                <draggable
+                    v-model="col.cards"
+                    item-key="id"
+                    group="kanban"          
+                    @end="onDragEnd"
+                    class="card-list"
+                    ghost-class="ghost"
+                    drag-class="dragging"
+                >
+                    <template #item="{ element }">
+                        <div class="card">
+                        {{ element.title }}
+                        </div>
+                    </template>
+                    <template #footer>
+                        <div class="drop-helper">Drop here</div>
+                    </template>
+                </draggable>
+            </div>
         </div>
     </div>
+    
 </template>
 
 <style scoped>
@@ -97,5 +145,9 @@ function onDragEnd() {
 .ghost { background: #dfeaff; }
 .drop-helper {
   opacity: .5; text-align: center; padding: 8px 0;
+}
+
+.error {
+    color: #e74c3c;
 }
 </style>

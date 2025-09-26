@@ -61,29 +61,48 @@ export const useBoard = defineStore('board', {
             }
         },
         async createBoard(name: string) {
-            this.loading = true,
-            this.error = ''
+            this.loading = true;
+            this.error = '';
             try {
-                const {data} = await axios.post<Board[]>('/api/kanban/boards', {name})
-                await this.loadAll()
-            } catch(e: any) {
-                this.error = e?.response?.data?.message || e?.response?.statusText || 'Failed to create board'
-                throw e
+                // Your API returns a single BoardDto
+                const { data } = await axios.post<Board>('/api/kanban/boards', { name });
+
+                // Optimistic add + focus it
+                this.boards.unshift(data);
+                this.activeBoardId = data.id;
+
+                // Load its default columns created server-side
+                await this.loadColumns(data.id);
+
+                // And cards for each (likely empty initially)
+                const cols = this.columnsOf(data.id);
+                await Promise.all(cols.map(c => this.loadCards(c.id)));
+
+                return data;
+            } catch (e: any) {
+                this.error = e?.response?.data?.message || e?.response?.statusText || 'Failed to create board';
+                throw e;
             } finally {
-                this.loading = false
+                this.loading = false;
             }
         },
         async addCard(columnId: string) {
-            this.loading = true
-            this.error = ''
+            this.loading = true;
+            this.error = '';
             try {
-                const {data} = await axios.post<Card>(`/api/kanban/columns/${columnId}/cards`, {title: "Title", description: "Description"})
-                await this.loadAll()
-            } catch(err: any) {
-                this.error = err?.response?.data?.message || err?.response?.statusText || 'Failed to create card'
-                throw err
+                const { data } = await axios.post<Card>(`/api/kanban/columns/${columnId}/cards`, {
+                title: "title",
+                description: "description"
+                });
+
+                // Ensure array exists, then append (keeps order stable)
+                const list = (this.cardsByColumn[columnId] ??= []);
+                list.push(data);
+            } catch (err: any) {
+                this.error = err?.response?.data?.message || err?.response?.statusText || 'Failed to create card';
+                throw err;
             } finally {
-                this.loading = false
+                this.loading = false;
             }
         }
     },

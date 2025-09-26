@@ -1,35 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onBeforeUnmount, ref, nextTick } from 'vue'
 import draggable from 'vuedraggable'
-import { v4 as uuid } from 'uuid'
-import axios from 'axios';
-import { useAuth } from '../../store/auth';
 import { useBoard } from '../../store/kanban'
-import { useRouter } from 'vue-router';
 
-const auth = useAuth()
-const router = useRouter()
 const boardStore = useBoard()
-
-const errorMsg = ref('')
-const loading = ref(false)
 
 const isInputVisible = ref(false)
 const newBoardName = ref('')
-
-type Card = { id: string; title: string }
-type Column = { id: string; name: string; cards: Card[] }
-
-// TO FIX => retrieve data from api
-/*const columns = ref<Column[]>([
-  { id: 'todo', name: 'To Do', cards: [{ id: 'c1', title: 'Set up project' },{ id: 'c2', title: 'Design database' }]},
-  { id: 'doing', name: 'Doing', cards: [{ id: 'c3', title: 'Build auth flow' }]},
-  { id: 'done', name: 'Done', cards: [{ id: 'c4', title: 'Create repo' }]}
-])*/
-
-async function addCard(columnId: string) {
-    await boardStore.addCard(columnId)
-}
 
 async function addBoard() {
     if (!newBoardName.value.trim()) return
@@ -39,13 +16,37 @@ async function addBoard() {
     isInputVisible.value = false
 }
 
+async function addCard(columnId: string) {
+    const y = window.scrollY
+    await boardStore.addCard(columnId)
+    await nextTick()
+    window.scrollTo({ top: y, behavior: 'auto' })
+}
+
 function onDragEnd() {
   // TO FIX => post modification to api
   //console.log('New order:', columns.value)
 }
 
+// typed handler (takes the event)
+const saveScroll: (e: BeforeUnloadEvent) => void = () => {
+  localStorage.setItem('scrollY', String(window.scrollY))
+}
+
 onMounted(async () => {
-    await boardStore.loadAll()
+   // load data first (layout may change)
+  await boardStore.loadAll()
+
+  // restore after data has rendered
+  const y = Number(localStorage.getItem('scrollY') || 0)
+  if (y) window.scrollTo({ top: y, behavior: 'auto' })
+
+  // add listener
+  window.addEventListener('beforeunload', saveScroll)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', saveScroll)
 })
 </script>
 

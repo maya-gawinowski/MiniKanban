@@ -27,8 +27,8 @@ type Column = { id: string; name: string; cards: Card[] }
   { id: 'done', name: 'Done', cards: [{ id: 'c4', title: 'Create repo' }]}
 ])*/
 
-function addCard(col: Column) {
-    col.cards.push({id: uuid(), title: "new card"})
+async function addCard(columnId: string) {
+    await boardStore.addCard(columnId)
 }
 
 async function addBoard() {
@@ -65,7 +65,7 @@ onMounted(async () => {
             <div v-for="col in boardStore.columnsOf(board.id)" :key="col.id" class="column">
                 <header class="column-header">
                 <h3>{{ col.name }}</h3>
-                <button class="add">＋</button>
+                <button class="add" @click="addCard(col.id)">＋</button>
                 </header>
 
                 <draggable
@@ -78,18 +78,20 @@ onMounted(async () => {
                     drag-class="dragging"
                 >
                     <template #item="{ element }">
-                        <div class="card">{{ element.title }}</div>
+                        <div class="card">
+                            <div>{{ element.title }}</div>
+                            <div>{{ element.description }}</div>
+                        </div>
                     </template>
                     <template #footer>
                         <div v-if="boardStore.cardsOf(col.id).length === 0" class="drop-helper">
-                        Drop cards here
+                            Drop cards here
                         </div>
                     </template>
                 </draggable>
             </div>
         </div>
     </div>
-    
 </template>
 
 <style scoped>

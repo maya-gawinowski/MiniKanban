@@ -258,8 +258,8 @@ public static class KanbanEndpoints
             var card = new Card
             {
                 ColumnId = columnId,
-                Title = req.Title.Trim(),
-                Description = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description!.Trim(),
+                Title = "Title",//req.Title.Trim(),
+                Description = "Description",//string.IsNullOrWhiteSpace(req.Description) ? null : req.Description!.Trim(),
                 Order = nextOrder + 1
             };
 

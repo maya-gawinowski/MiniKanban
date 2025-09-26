@@ -67,8 +67,21 @@ export const useBoard = defineStore('board', {
                 const {data} = await axios.post<Board[]>('/api/kanban/boards', {name})
                 await this.loadAll()
             } catch(e: any) {
-                this.error = e?.response?.data?.message || e?.response?.statusText || 'Failed to load boards'
+                this.error = e?.response?.data?.message || e?.response?.statusText || 'Failed to create board'
                 throw e
+            } finally {
+                this.loading = false
+            }
+        },
+        async addCard(columnId: string) {
+            this.loading = true
+            this.error = ''
+            try {
+                const {data} = await axios.post<Card>(`/api/kanban/columns/${columnId}/cards`, {title: "Title", description: "Description"})
+                await this.loadAll()
+            } catch(err: any) {
+                this.error = err?.response?.data?.message || err?.response?.statusText || 'Failed to create card'
+                throw err
             } finally {
                 this.loading = false
             }

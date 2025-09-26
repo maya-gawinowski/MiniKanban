@@ -9,53 +9,43 @@ import { useRouter } from 'vue-router';
 
 const auth = useAuth()
 const router = useRouter()
-const board = useBoard()
+const boardStore = useBoard()
 
 const errorMsg = ref('')
 const loading = ref(false)
 
 const isInputVisible = ref(false)
-const input = ref('')
+const newBoardName = ref('')
 
 type Card = { id: string; title: string }
 type Column = { id: string; name: string; cards: Card[] }
 
 // TO FIX => retrieve data from api
-const columns = ref<Column[]>([
+/*const columns = ref<Column[]>([
   { id: 'todo', name: 'To Do', cards: [{ id: 'c1', title: 'Set up project' },{ id: 'c2', title: 'Design database' }]},
   { id: 'doing', name: 'Doing', cards: [{ id: 'c3', title: 'Build auth flow' }]},
   { id: 'done', name: 'Done', cards: [{ id: 'c4', title: 'Create repo' }]}
-])
+])*/
 
 function addCard(col: Column) {
     col.cards.push({id: uuid(), title: "new card"})
 }
 
 async function addBoard() {
-    if (!input.value.trim()) return
+    if (!newBoardName.value.trim()) return
     
-    await board.createBoard(input.value)
-    input.value = ''
+    await boardStore.createBoard(newBoardName.value)
+    newBoardName.value = ''
     isInputVisible.value = false
 }
 
 function onDragEnd() {
   // TO FIX => post modification to api
-  console.log('New order:', columns.value)
+  //console.log('New order:', columns.value)
 }
 
 onMounted(async () => {
-    if (!auth.isLoggedIn) {
-        router.push({path: '/login', query: {redirect: '/kanban'}})
-        return
-    }
-
-    try {
-        await board.loadBoards()
-        console.log(board.boards)
-    } catch {
-
-    }
+    await boardStore.loadAll()
 })
 </script>
 
@@ -63,23 +53,23 @@ onMounted(async () => {
     <h2 class="">My mini Kanban</h2>
     <button class="add" @click="isInputVisible = !isInputVisible">Add a board</button>
     <p v-if="isInputVisible">Choose your new board's name</p>
-    <input v-if="isInputVisible" type="text" v-model="input">
+    <input v-if="isInputVisible" type="text" v-model="newBoardName">
     <button v-if="isInputVisible" class="add" @click="addBoard">Create Board</button>
     
-    <div v-if="board.loading">Loading boards...</div>
-    <p v-else-if="board.error" class="error">{{ board.error }}</p>
+    <div v-if="boardStore.loading">Loading boards...</div>
+    <p v-else-if="boardStore.error" class="error">{{ boardStore.error }}</p>
 
-    <div v-else v-for="board in board.boards" :key="board.id">
+    <div v-else v-for="board in boardStore.boards" :key="board.id">
         <h3>{{  board.name  }}</h3>
         <div class="board">
-            <div v-for="col in columns" :key="col.id" class="column">
+            <div v-for="col in boardStore.columnsOf(board.id)" :key="col.id" class="column">
                 <header class="column-header">
                 <h3>{{ col.name }}</h3>
-                <button class="add" @click="addCard(col)">＋</button>
+                <button class="add">＋</button>
                 </header>
 
                 <draggable
-                    v-model="col.cards"
+                :list="boardStore.cardsOf(col.id)"
                     item-key="id"
                     group="kanban"          
                     @end="onDragEnd"
@@ -88,12 +78,12 @@ onMounted(async () => {
                     drag-class="dragging"
                 >
                     <template #item="{ element }">
-                        <div class="card">
-                        {{ element.title }}
-                        </div>
+                        <div class="card">{{ element.title }}</div>
                     </template>
                     <template #footer>
-                        <div class="drop-helper">Drop here</div>
+                        <div v-if="boardStore.cardsOf(col.id).length === 0" class="drop-helper">
+                        Drop cards here
+                        </div>
                     </template>
                 </draggable>
             </div>
@@ -131,9 +121,11 @@ onMounted(async () => {
 }
 
 .card-list {
-  padding: 10px;
-  display: flex; flex-direction: column; gap: 8px;
-  min-height: 160px;
+  opacity: .6;
+  text-align: center;
+  padding: 12px 0;
+  border: 1px dashed #cfd6e0;
+  border-radius: 8px;
 }
 
 .card {
@@ -144,7 +136,11 @@ onMounted(async () => {
 .dragging { opacity: .7; }
 .ghost { background: #dfeaff; }
 .drop-helper {
-  opacity: .5; text-align: center; padding: 8px 0;
+    opacity: .6;
+    text-align: center;
+    padding: 12px 0;
+    border: 1px dashed #cfd6e0;
+    border-radius: 8px;
 }
 
 .error {

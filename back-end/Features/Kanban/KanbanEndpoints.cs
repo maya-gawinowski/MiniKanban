@@ -59,13 +59,23 @@ public static class KanbanEndpoints
             if (string.IsNullOrWhiteSpace(req.Name))
                 return Results.BadRequest(new { message = "Name is required" });
 
-            var uid = CurrentUserId(ctx);
+            var uid = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var board = new Board { Name = req.Name.Trim(), OwnerId = uid };
+            await using var tx = await db.Database.BeginTransactionAsync();
+
+            var board = new Board { Name = req.Name.Trim(), OwnerId = uid! };
             db.Boards.Add(board);
-            db.BoardUsers.Add(new BoardUser { Board = board, UserId = uid, Role = BoardRole.Owner });
+            db.BoardUsers.Add(new BoardUser { Board = board, UserId = uid!, Role = BoardRole.Owner });
+
+            db.Columns.AddRange(
+                new Column { Board = board, Name = "todo",  Order = 0 },
+                new Column { Board = board, Name = "doing", Order = 1 },
+                new Column { Board = board, Name = "done",  Order = 2 }
+            );
 
             await db.SaveChangesAsync();
+            await tx.CommitAsync();
+
             return Results.Ok(new BoardDto(board.Id, board.Name, board.OwnerId));
         });
 

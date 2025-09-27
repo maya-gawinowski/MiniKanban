@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, nextTick } from 'vue'
+import { onMounted, onBeforeUnmount, ref, nextTick, reactive } from 'vue'
 import draggable from 'vuedraggable'
 import { useBoard } from '../../store/kanban'
 
@@ -29,6 +29,31 @@ async function addCard(columnId: string) {
 
 async function deleteCard(cardId: string, columnId: string) {
     await boardStore.deleteCard(cardId, columnId);
+}
+
+// which card is being edited + draft value
+const editing = reactive<{ id: string | null; title: string }>({ id: null, title: '' })
+
+function startEdit(cardId: string, currentTitle: string) {
+  editing.id = cardId
+  editing.title = currentTitle
+  nextTick(() => {
+    // focus the input after it appears
+    const el = document.getElementById(`title-input-${cardId}`)
+    el?.focus()
+    ;(el as HTMLInputElement | null)?.select?.()
+  })
+}
+
+async function saveEdit(cardId: string, columnId: string) {
+  const title = editing.title.trim()
+  if (!title) return // or delete/restore
+  await boardStore.updateCardTitle(cardId, columnId, title) // see store action below
+  editing.id = null
+}
+
+function cancelEdit() {
+  editing.id = null
 }
 
 function onDragEnd() {
@@ -89,9 +114,30 @@ onBeforeUnmount(() => {
                 >
                     <template #item="{ element }">
                         <div class="card">
-                            <div>{{ element.title }}</div>
+                            <div class="card-header">
+                            <!-- View mode -->
+                            <p v-if="editing.id !== element.id"
+                                class="card-title"
+                                @click="startEdit(element.id, element.title)"
+                                title="Click to edit">
+                                {{ element.title }}
+                            </p>
+
+                            <!-- Edit mode -->
+                            <input
+                                v-else
+                                :id="`title-input-${element.id}`"
+                                v-model.trim="editing.title"
+                                class="card-title-input"
+                                type="text"
+                                @keyup.enter.prevent="saveEdit(element.id, col.id)"
+                                @blur="saveEdit(element.id, col.id)"
+                                @keyup.esc="cancelEdit"
+                            />
+                            </div>
+
                             <button class="add" @click="deleteCard(element.id, col.id)">delete</button>
-                            <div>{{ element.description }}</div>
+                            <div class="desc" v-if="element.description">{{ element.description }}</div>
                         </div>
                     </template>
                     <template #footer>

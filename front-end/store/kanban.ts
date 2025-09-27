@@ -148,5 +148,32 @@ export const useBoard = defineStore('board', {
                 this.loading = false;
             }
         },
+        async updateCardTitle(cardId: string, columnId: string, title: string) {
+            this.loading = true;
+            this.error = '';
+
+            // optimistic update
+            const list = this.cardsByColumn[columnId] ?? [];
+            const idx = list.findIndex(c => c.id === cardId);
+            if (idx < 0) return;
+
+            const current = list[idx]!;
+            const prev = { ...current };
+
+            list[idx]!.title = title;
+
+            try {
+                await axios.put(`/api/kanban/cards/${cardId}`, { title: title }); // or PATCH if you prefer
+                console.log("HEHO")
+                return list[idx];
+            } catch (e: any) {
+                // rollback on failure
+                list[idx] = prev;
+                this.error = e?.response?.data?.message || e?.response?.statusText || 'Failed to update card title'
+                throw e
+            } finally {
+                this.loading = false;
+            }
+        }
     },
 })

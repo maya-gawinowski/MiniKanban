@@ -18,6 +18,8 @@ public record ReorderColumnsRequest(List<Guid> ColumnIdsInOrder);
 public record CreateCardRequest(string Title, string? Description);
 public record ReorderCardsRequest(Guid ColumnId, List<Guid> CardIdsInOrder);
 
+public record UpdateCardRequest(string? Title, string? Description);
+
 public record MoveCardRequest(Guid CardId, Guid FromColumnId, Guid ToColumnId, int ToIndex);
 
 public record AddMemberRequest(string Email, BoardRole Role);

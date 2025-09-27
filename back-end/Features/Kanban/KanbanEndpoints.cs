@@ -245,8 +245,9 @@ public static class KanbanEndpoints
             return Results.Ok(cards);
         });
 
-        // POST /api/kanban/columns/{columnId}/cards (editors/owners)
-        g.MapPost("/columns/{columnId:guid}/cards", async (Guid columnId, CreateCardRequest req, ApplicationDbContext db, HttpContext ctx) =>
+        // POST /api/kanban/columns/{columnId}/cards
+        g.MapPost("/columns/{columnId:guid}/cards", async (Guid columnId, CreateCardRequest req,
+            ApplicationDbContext db, HttpContext ctx) =>
         {
             var uid = CurrentUserId(ctx);
 
@@ -258,8 +259,8 @@ public static class KanbanEndpoints
             var card = new Card
             {
                 ColumnId = columnId,
-                Title = "Title",//req.Title.Trim(),
-                Description = "Description",//string.IsNullOrWhiteSpace(req.Description) ? null : req.Description!.Trim(),
+                Title = string.IsNullOrWhiteSpace(req.Title) ? "Untitled" : req.Title.Trim(),
+                Description = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description!.Trim(),
                 Order = nextOrder + 1
             };
 
@@ -268,6 +269,7 @@ public static class KanbanEndpoints
 
             return Results.Ok(new CardDto(card.Id, card.Title, card.Description, card.Order));
         });
+
 
         // POST /api/kanban/cards/reorder (editors/owners) — same column
         g.MapPost("/cards/reorder", async (ReorderCardsRequest req, ApplicationDbContext db, HttpContext ctx) =>
@@ -316,6 +318,32 @@ public static class KanbanEndpoints
             await db.SaveChangesAsync();
             return Results.NoContent();
         });
+
+        // PUT /api/kanban/cards/{cardId}  (Editors/Owners)
+        g.MapPut("/cards/{cardId:guid}", async (Guid cardId, UpdateCardRequest req,
+            ApplicationDbContext db, HttpContext ctx) =>
+        {
+            var uid = CurrentUserId(ctx);
+
+            var card = await db.Cards
+                .Include(c => c.Column)
+                .ThenInclude(col => col.Board)
+                .FirstOrDefaultAsync(c => c.Id == cardId);
+
+            if (card is null) return Results.NotFound();
+            if (!await CanEdit(db, card.Column.BoardId, uid)) return Results.Forbid();
+
+            if (!string.IsNullOrWhiteSpace(req.Title))
+                card.Title = req.Title.Trim();
+
+            // optional if you support editing description
+            if (req.Description is not null)
+                card.Description = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description.Trim();
+
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+
 
         // DELETE /api/kanban/cards/{cardId}  (Owner only)
         g.MapDelete("/cards/{cardId:guid}", async (Guid cardId, ApplicationDbContext db, HttpContext ctx) =>

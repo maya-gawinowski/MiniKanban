@@ -16,11 +16,19 @@ async function addBoard() {
     isInputVisible.value = false
 }
 
+async function deleteBoard(boardId: string) {
+    await boardStore.deleteBoard(boardId)
+}
+
 async function addCard(columnId: string) {
     const y = window.scrollY
     await boardStore.addCard(columnId)
     await nextTick()
     window.scrollTo({ top: y, behavior: 'auto' })
+}
+
+async function deleteCard(cardId: string, columnId: string) {
+    await boardStore.deleteCard(cardId, columnId);
 }
 
 function onDragEnd() {
@@ -62,6 +70,7 @@ onBeforeUnmount(() => {
 
     <div v-else v-for="board in boardStore.boards" :key="board.id">
         <h3>{{  board.name  }}</h3>
+        <button class="add" @click="deleteBoard(board.id)">delete</button>
         <div class="board">
             <div v-for="col in boardStore.columnsOf(board.id)" :key="col.id" class="column">
                 <header class="column-header">
@@ -81,6 +90,7 @@ onBeforeUnmount(() => {
                     <template #item="{ element }">
                         <div class="card">
                             <div>{{ element.title }}</div>
+                            <button class="add" @click="deleteCard(element.id, col.id)">delete</button>
                             <div>{{ element.description }}</div>
                         </div>
                     </template>

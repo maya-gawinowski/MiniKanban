@@ -317,6 +317,41 @@ public static class KanbanEndpoints
             return Results.NoContent();
         });
 
+        // DELETE /api/kanban/cards/{cardId}  (Owner only)
+        g.MapDelete("/cards/{cardId:guid}", async (Guid cardId, ApplicationDbContext db, HttpContext ctx) =>
+        {
+            var uid = CurrentUserId(ctx);
+
+            // Load the card with its Column and Board for auth
+            var card = await db.Cards
+                .Include(c => c.Column)
+                .ThenInclude(col => col.Board)
+                .FirstOrDefaultAsync(c => c.Id == cardId);
+
+            if (card is null) return Results.NotFound();
+
+            if (!await CanEdit(db, card.Column.BoardId, uid)) return Results.Forbid();
+
+            var columnId = card.ColumnId;
+
+            // Delete
+            db.Cards.Remove(card);
+            await db.SaveChangesAsync();
+
+            // Re-compact orders in the column
+            var remaining = await db.Cards
+                .Where(c => c.ColumnId == columnId)
+                .OrderBy(c => c.Order)
+                .ToListAsync();
+
+            for (int i = 0; i < remaining.Count; i++)
+                remaining[i].Order = i;
+
+            await db.SaveChangesAsync();
+
+            return Results.NoContent();
+        });
+
         return g;
     }
 }

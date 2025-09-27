@@ -104,6 +104,49 @@ export const useBoard = defineStore('board', {
             } finally {
                 this.loading = false;
             }
-        }
+        },
+        async deleteBoard(boardId: string) {
+            this.loading = true;
+            this.error = '';
+            try {
+                const {data} = await axios.delete(`/api/kanban/boards/${boardId}`);
+
+                this.boards = this.boards.filter(b => b.id !== boardId)
+
+                delete this.columnsByBoard[boardId];
+                for (const c of (this.columnsByBoard[boardId] ?? [])) {
+                    delete this.cardsByColumn[c.id]
+                }
+                if (this.activeBoardId === boardId) {
+                    this.activeBoardId = this.boards[0]?.id ?? null
+                }
+            } catch(e: any) {
+                this.error = e?.response?.data?.message || e?.response?.statusText || 'Failed to delete board';
+                throw e;
+            } finally {
+                this.loading = false;
+            }
+        },
+        async deleteCard(cardId: string, columnId: string) {
+            this.loading = true;
+            this.error = '';
+
+            // optimistic remove from local state
+            const list = this.cardsByColumn[columnId] ?? []
+            const idx = list.findIndex(c => c.id === cardId)
+            const removed = idx !== -1 ? list.splice(idx, 1)[0] : null
+
+            try {
+                await axios.delete(`/api/kanban/cards/${cardId}`)
+                // success: nothing more to do
+            } catch (e: any) {
+                // rollback if server failed
+                if (removed) list.splice(idx, 0, removed)
+                this.error = e?.response?.data?.message || e?.response?.statusText || 'Failed to delete card'
+                throw e
+            } finally {
+                this.loading = false;
+            }
+        },
     },
 })

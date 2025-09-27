@@ -290,32 +290,76 @@ public static class KanbanEndpoints
             return Results.NoContent();
         });
 
-        // POST /api/kanban/cards/move (editors/owners) — across columns
+        // Endpoint
         g.MapPost("/cards/move", async (MoveCardRequest req, ApplicationDbContext db, HttpContext ctx) =>
         {
             var uid = CurrentUserId(ctx);
 
-            // validate membership + edit rights via both columns' boards
-            var fromCol = await db.Columns.Include(c => c.Board).FirstOrDefaultAsync(c => c.Id == req.FromColumnId);
+            // Load the card and its current column/board
+            var card = await db.Cards
+                .Include(c => c.Column)
+                .ThenInclude(col => col.Board)
+                .FirstOrDefaultAsync(c => c.Id == req.CardId);
+            if (card is null) return Results.NotFound(new { message = "Card not found" });
+
+            if (card.ColumnId != req.FromColumnId)
+                return Results.BadRequest(new { message = "Card not in source column" });
+
+            // Auth on source board
+            if (!await CanEdit(db, card.Column.BoardId, uid)) return Results.Forbid();
+
+            // Load target column (+ board) and auth
             var toCol = await db.Columns.Include(c => c.Board).FirstOrDefaultAsync(c => c.Id == req.ToColumnId);
-            if (fromCol is null || toCol is null) return Results.NotFound();
-            if (!await CanEdit(db, fromCol.BoardId, uid) || !await CanEdit(db, toCol.BoardId, uid)) return Results.Forbid();
+            if (toCol is null) return Results.NotFound(new { message = "Target column not found" });
+            if (!await CanEdit(db, toCol.BoardId, uid)) return Results.Forbid();
 
-            var card = await db.Cards.FirstOrDefaultAsync(c => c.Id == req.CardId && c.ColumnId == fromCol.Id);
-            if (card is null) return Results.NotFound();
+            await using var tx = await db.Database.BeginTransactionAsync();
 
-            // compact orders in fromCol
-            var fromCards = await db.Cards.Where(c => c.ColumnId == fromCol.Id).OrderBy(c => c.Order).ToListAsync();
-            fromCards.RemoveAll(c => c.Id == card.Id);
-            for (int i = 0; i < fromCards.Count; i++) fromCards[i].Order = i;
+            if (req.FromColumnId == req.ToColumnId)
+            {
+                // SAME COLUMN: compact and insert
+                var list = await db.Cards
+                    .Where(c => c.ColumnId == req.FromColumnId)
+                    .OrderBy(c => c.Order)
+                    .ToListAsync();
 
-            // insert into toCol at requested index
-            var toCards = await db.Cards.Where(c => c.ColumnId == toCol.Id).OrderBy(c => c.Order).ToListAsync();
-            var insertIndex = Math.Clamp(req.ToIndex, 0, toCards.Count);
-            toCards.Insert(insertIndex, card);
-            for (int i = 0; i < toCards.Count; i++) { toCards[i].ColumnId = toCol.Id; toCards[i].Order = i; }
+                list.RemoveAll(c => c.Id == req.CardId);
+                var insertAt = Math.Clamp(req.ToIndex, 0, list.Count);
+                list.Insert(insertAt, card);
+
+                for (int i = 0; i < list.Count; i++)
+                    list[i].Order = i;
+            }
+            else
+            {
+                // SOURCE: close gap
+                var source = await db.Cards
+                    .Where(c => c.ColumnId == req.FromColumnId)
+                    .OrderBy(c => c.Order)
+                    .ToListAsync();
+
+                source.RemoveAll(c => c.Id == req.CardId);
+                for (int i = 0; i < source.Count; i++)
+                    source[i].Order = i;
+
+                // TARGET: insert at index
+                var target = await db.Cards
+                    .Where(c => c.ColumnId == req.ToColumnId)
+                    .OrderBy(c => c.Order)
+                    .ToListAsync();
+
+                var insertAt = Math.Clamp(req.ToIndex, 0, target.Count);
+                target.Insert(insertAt, card);
+
+                for (int i = 0; i < target.Count; i++)
+                {
+                    target[i].ColumnId = req.ToColumnId;
+                    target[i].Order = i;
+                }
+            }
 
             await db.SaveChangesAsync();
+            await tx.CommitAsync();
             return Results.NoContent();
         });
 

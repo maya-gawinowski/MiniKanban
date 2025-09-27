@@ -5,6 +5,10 @@ import { useBoard } from '../../store/kanban'
 
 const boardStore = useBoard()
 
+const dragStartSnapshot = new Map<string, string[]>() // columnId -> ids[]
+
+const pendingMove = ref<{ cardId: string; fromColumnId: string } | null>(null)
+
 const isInputVisible = ref(false)
 const newBoardName = ref('')
 
@@ -56,10 +60,49 @@ function cancelEdit() {
   editing.id = null
 }
 
-function onDragEnd() {
-  // TO FIX => post modification to api
-  //console.log('New order:', columns.value)
+function onDragStart(columnId: string) {
+  const ids = boardStore.cardsOf(columnId).map(c => c.id)
+  dragStartSnapshot.set(columnId, ids)
 }
+
+async function onDragEnd(columnId: string) {
+    console.log(dragStartSnapshot, columnId)
+    const orderIds = boardStore.cardsOf(columnId).map(c => c.id);
+    try {
+        await boardStore.reOrderCards(columnId, orderIds);
+    } catch (e: any) {
+        const prev = dragStartSnapshot.get(columnId)
+        if (prev) {
+        const byId = new Map(boardStore.cardsOf(columnId).map(c => [c.id, c]))
+        boardStore.cardsByColumn[columnId] = prev.map(id => byId.get(id)!).filter(Boolean)
+        }
+    } finally {
+        dragStartSnapshot.delete(columnId)
+    }
+}
+
+function onAdd(evt: any) {
+  const toColumnId   = (evt.to   as HTMLElement).dataset.colId!
+  const fromColumnId = (evt.from as HTMLElement).dataset.colId!
+  const cardId: string = (evt.item as any).__draggable_context?.element?.id
+  const toIndex: number = evt.newIndex
+
+  if (!cardId) return
+
+  if (fromColumnId === toColumnId) {
+    // same-column: persist reorder
+    const ids = boardStore.cardsOf(toColumnId).map(c => c.id)
+    boardStore.reOrderCards(toColumnId, ids).catch(() => {})
+  } else {
+    // cross-column: persist move
+    boardStore.moveCard(cardId, fromColumnId, toColumnId, toIndex).catch(() => {})
+  }
+}
+
+function onRemove(_evt: any) {
+  // optional now; we don’t need pendingMove anymore
+}
+
 
 // typed handler (takes the event)
 const saveScroll: (e: BeforeUnloadEvent) => void = () => {
@@ -106,8 +149,11 @@ onBeforeUnmount(() => {
                 <draggable
                 :list="boardStore.cardsOf(col.id)"
                     item-key="id"
-                    group="kanban"          
-                    @end="onDragEnd"
+                    group="kanban" 
+                    :data-col-id="col.id"
+                    @end="onDragEnd(col.id)"          
+                    @add="onAdd($event)"             
+                    @remove="onRemove($event)"
                     class="card-list"
                     ghost-class="ghost"
                     drag-class="dragging"

@@ -174,6 +174,74 @@ export const useBoard = defineStore('board', {
             } finally {
                 this.loading = false;
             }
+        },
+        async reOrderCards(columnId: string, orderedIds: string[]) {
+            this.loading = true;
+            this.error = '';
+
+            // optimistic: keep a snapshot to rollback
+            const prev = (this.cardsByColumn[columnId] ?? []).map(c => ({ ...c }))
+
+            // vuedraggable already reordered the list bound to :list,
+            // but ensure our array is sorted to match orderedIds
+            const byId = new Map(prev.map(c => [c.id, c]))
+            this.cardsByColumn[columnId] = orderedIds
+                .map(id => byId.get(id)!)
+                .filter(Boolean)
+
+            try {
+                await axios.post('/api/kanban/cards/reorder', {
+                columnId,
+                cardIdsInOrder: orderedIds,
+                })
+            } catch (e: any) {
+                // rollback on error
+                this.cardsByColumn[columnId] = prev
+                this.error =
+                e?.response?.data?.message ||
+                e?.response?.statusText ||
+                'Failed to save reorder'
+                throw e
+            } finally {
+                this.loading = false;
+            }
+        },
+        // src/store/kanban.ts
+        async moveCard(cardId: string, fromColumnId: string, toColumnId: string, toIndex: number) {
+            this.error = ''
+            this.loading = true
+
+            // At this point, vuedraggable has already:
+            // - removed the card from this.cardsByColumn[fromColumnId]
+            // - inserted it into this.cardsByColumn[toColumnId] at toIndex
+            const from = this.cardsByColumn[fromColumnId] ?? []
+            const to   = this.cardsByColumn[toColumnId] ?? []
+
+            // snapshots for rollback
+            const prevFrom = from.slice()
+            const prevTo   = to.slice()
+
+            try {
+                // persist to server
+                await axios.post('/api/kanban/cards/move', {
+                cardId,
+                fromColumnId,
+                toColumnId,
+                toIndex
+                })
+
+                // keep local orders in sync (no extra splices)
+                from.forEach((c, i) => { c.order = i })
+                to.forEach((c, i)   => { c.order = i })
+            } catch (e: any) {
+                // rollback if server fails
+                this.cardsByColumn[fromColumnId] = prevFrom
+                this.cardsByColumn[toColumnId]   = prevTo
+                this.error = e?.response?.data?.message || e?.response?.statusText || 'Failed to move card'
+                throw e
+            } finally {
+                this.loading = false
+            }
         }
     },
 })

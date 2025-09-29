@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, nextTick, reactive } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, nextTick, reactive } from 'vue'
 import draggable from 'vuedraggable'
 import { useBoard } from '../../store/kanban'
 
 const boardStore = useBoard()
 
-const dragStartSnapshot = new Map<string, string[]>() // columnId -> ids[]
+const active = computed(() => boardStore.activeBoard)
 
-const pendingMove = ref<{ cardId: string; fromColumnId: string } | null>(null)
+const dragStartSnapshot = new Map<string, string[]>() // columnId -> ids[]
 
 const isInputVisible = ref(false)
 const newBoardName = ref('')
@@ -60,11 +60,6 @@ function cancelEdit() {
   editing.id = null
 }
 
-function onDragStart(columnId: string) {
-  const ids = boardStore.cardsOf(columnId).map(c => c.id)
-  dragStartSnapshot.set(columnId, ids)
-}
-
 async function onDragEnd(columnId: string) {
     console.log(dragStartSnapshot, columnId)
     const orderIds = boardStore.cardsOf(columnId).map(c => c.id);
@@ -111,7 +106,6 @@ const saveScroll: (e: BeforeUnloadEvent) => void = () => {
 
 onMounted(async () => {
    // load data first (layout may change)
-  await boardStore.loadAll()
 
   // restore after data has rendered
   const y = Number(localStorage.getItem('scrollY') || 0)
@@ -127,20 +121,18 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <h2 class="">My mini Kanban</h2>
-    <button class="add" @click="isInputVisible = !isInputVisible">Add a board</button>
-    <p v-if="isInputVisible">Choose your new board's name</p>
-    <input v-if="isInputVisible" type="text" v-model="newBoardName">
-    <button v-if="isInputVisible" class="add" @click="addBoard">Create Board</button>
+  <div class="container">
+
+    <div v-if="active">
+<h2>{{ boardStore.activeBoard?.name }}</h2>
     
-    <div v-if="boardStore.loading">Loading boards...</div>
+    <div v-if="boardStore.loading">Loading board...</div>
     <p v-else-if="boardStore.error" class="error">{{ boardStore.error }}</p>
 
-    <div v-else v-for="board in boardStore.boards" :key="board.id">
-        <h3>{{  board.name  }}</h3>
-        <button class="add" @click="deleteBoard(board.id)">delete</button>
+    
+        <button class="add" @click="deleteBoard(active.id)">delete</button>
         <div class="board">
-            <div v-for="col in boardStore.columnsOf(board.id)" :key="col.id" class="column">
+            <div v-for="col in boardStore.columnsOf(active.id)" :key="col.id" class="column">
                 <header class="column-header">
                 <h3>{{ col.name }}</h3>
                 <button class="add" @click="addCard(col.id)">＋</button>
@@ -161,7 +153,6 @@ onBeforeUnmount(() => {
                     <template #item="{ element }">
                         <div class="card">
                             <div class="card-header">
-                            <!-- View mode -->
                             <p v-if="editing.id !== element.id"
                                 class="card-title"
                                 @click="startEdit(element.id, element.title)"
@@ -169,7 +160,6 @@ onBeforeUnmount(() => {
                                 {{ element.title }}
                             </p>
 
-                            <!-- Edit mode -->
                             <input
                                 v-else
                                 :id="`title-input-${element.id}`"
@@ -195,9 +185,18 @@ onBeforeUnmount(() => {
             </div>
         </div>
     </div>
+  </div>
+    
 </template>
 
 <style scoped>
+.container {
+  width: 80%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .board {
   display: grid;
   grid-template-columns: repeat(3, minmax(260px, 1fr));

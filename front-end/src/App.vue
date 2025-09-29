@@ -25,7 +25,6 @@ import FooterBar from './components/FooterBar.vue';
   width: 100%;
 }
 .content {
-  padding: 1rem;
   overflow: auto;
 }
 </style>

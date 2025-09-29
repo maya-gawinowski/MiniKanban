@@ -12,14 +12,14 @@ export const useBoard = defineStore('board', {
         cardsByColumn: {} as Record<string, Card[]>,
         loading: false as boolean,
         error: '' as string | null,
-        activeBoardId: '' as string | null,
+        activeBoardId: null as string | null,
     }),
     getters: {
         columnsOf: (s) => (boardId: string) => s.columnsByBoard[boardId] ?? [],
         cardsOf: (s) => (columnId: string) => s.cardsByColumn[columnId] ?? [],
-        activeBoard(state): Board | undefined {
-            return state.boards.find(b => b.id === state.activeBoardId)
-    }
+        activeBoard(s) {
+            return s.boards.find(b => b.id === s.activeBoardId)
+        }
     },
     actions: {
         async loadBoards() {
@@ -86,6 +86,12 @@ export const useBoard = defineStore('board', {
                 this.loading = false;
             }
         },
+        async selectBoard(boardId: string) {
+            if (this.boards.find(b => b.id == boardId)) {
+                this.activeBoardId = boardId; 
+            }
+            console.log(boardId, this.activeBoardId);
+        },  
         async addCard(columnId: string) {
             this.loading = true;
             this.error = '';

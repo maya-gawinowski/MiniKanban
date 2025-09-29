@@ -4,13 +4,14 @@ import App from './App.vue'
 import { router } from './router'
 import axios from 'axios'
 import { useAuth } from '../store/auth'
-import { createPinia } from 'pinia'
+import { createPinia, setActivePinia } from 'pinia'
 
 const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
 app.use(router)
+setActivePinia(pinia)
 
 axios.interceptors.request.use((config) => {
     const auth = useAuth()

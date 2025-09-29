@@ -17,7 +17,7 @@ function onLogout() {
 <template>
   <header class="header-bar" v-bind="$attrs">
     <nav class="main-nav">
-        <RouterLink to="/">Home</RouterLink>
+        <RouterLink to="/">Mini Kanban</RouterLink>
         <RouterLink v-if="!auth.isLoggedIn" class="push-right" to="/login">Login</RouterLink>
         <a v-else class="push-right" @click="onLogout">Logout</a>
     </nav>
@@ -32,7 +32,7 @@ function onLogout() {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: lightgrey;
+    background: var(--purple-light);
 }
 .main-nav {
     display: flex;
@@ -45,10 +45,10 @@ a.router-link-active {
 }
 a {
     margin: 1rem;
-    color: black;
+    color: var(--purple-dark);
 }
 a:hover {
-    color: white;
+    color: var(--purple-medium);
 }
 .push-right {
     margin-left: auto;

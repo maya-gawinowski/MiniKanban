@@ -51,89 +51,33 @@ async function submitForm() {
 </script>
 
 <template>
-    <div class="register-page">
-        <form class="register-form" @submit.prevent="submitForm" novalidate>
-            <h2 class="title">Sign up</h2>
-            <label>
+    <div class="form-container">
+        <form class="register-form form" @submit.prevent="submitForm" novalidate>
+            <h2 class="form-title">Sign up</h2>
+            <label class="form-label">
                 Email
-                <input v-model="email" type="email" required autocomplete="email"/>
+                <input class="form-input" v-model="email" type="email" required autocomplete="email"/>
             </label>
-            <label>
+            <label class="form-label">
                 Confirm email
-                <input v-model="confirmEmail" type="email" required autocomplete="email"/>
+                <input class="form-input" v-model="confirmEmail" type="email" required autocomplete="email"/>
             </label>
-            <label>
+            <label class="form-label">
                 Password
-                <input v-model="password" type="password" required minlength="6" autocomplete="new-password"/>
+                <input class="form-input" v-model="password" type="password" required minlength="6" autocomplete="new-password"/>
             </label>
-            <label>
+            <label class="form-label">
                 Confirm password
-                <input v-model="confirmPassword" type="password" required minlength="6" autocomplete="new-password"/>
+                <input class="form-input" v-model="confirmPassword" type="password" required minlength="6" autocomplete="new-password"/>
             </label>
-            <button type="submit">Sign in</button>
+            <button class="form-button" type="submit">Sign in</button>
             <p v-if="errorMsg" class="error">{{ errorMsg }}</p>
-            <p>Have an account already ? </p> <a href="/login">Log in</a>
-
+            <p>Have an account already ? </p> <a class="form-link" href="/login">Log in</a>
         </form>
     </div>
 </template>
 
-<style scoped>
-.register-page {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: calc(100vh-100px);
-    background: #f9f9f9;
-}
-.register-form {
-    width: 100%;
-    max-width: 320px;
-    padding: 2rem;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-.title {
-    margin: 0 0 1rem;
-    text-align: center;
-}
-label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    font-weight: 500;
-}
-input {
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
-}
-button {
-    padding: 0.6rem;
-    font-size: 1rem;
-    background: #4a90e2;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-button:hover {
-    background: #357abd;
-}
-a, p {
-    margin: 0;
-    padding: 0;
-}
-a {
-    color: #4a90e2;
-}
-.error {
-    color: #e74c3c;
-    text-align: center;
-}
+<style>
+
+
 </style>

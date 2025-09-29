@@ -9,9 +9,9 @@
     height: 100%;
     width: 100%;
     align-items: center;
-    background: grey;
+    background: var(--purple-dark);
 }
 small {
-    color: white;
+    color: var(--purple-light);
 }
 </style>
